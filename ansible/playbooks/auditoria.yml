@@ -1,0 +1,7 @@
+---
+- name: Configurar auditoría de logs con auditd
+  hosts: servidores
+  become: yes
+
+  roles:
+    - auditd

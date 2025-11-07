@@ -1,0 +1,41 @@
+---
+- name: Instalar auditd
+  ansible.builtin.package:
+    name: auditd
+    state: present
+
+- name: Copiar configuración personalizada de auditd
+  ansible.builtin.template:
+    src: auditd.conf.j2
+    dest: /etc/audit/auditd.conf
+    mode: '0644'
+
+- name: Asegurar que auditd esté habilitado y corriendo
+  ansible.builtin.service:
+    name: auditd
+    state: started
+    enabled: yes
+
+- name: Copiar script de auditoría programada
+  ansible.builtin.copy:
+    src: audit-cron.sh
+    dest: /usr/local/bin/audit-cron.sh
+    mode: '0755'
+
+- name: Configurar tarea cron para enviar reportes
+  ansible.builtin.cron:
+    name: "Auditoría de logs automática"
+    user: root
+    job: "/usr/local/bin/audit-cron.sh > /var/log/audit_report.log 2>&1"
+    hour: 1
+
+- name: Asegurar valores válidos en auditd.conf
+  lineinfile:
+    path: /etc/audit/auditd.conf
+    regexp: '^{{ item.key }}'
+    line: "{{ item.key }} = {{ item.value }}"
+  loop:
+    - { key: 'space_left', value: '75' }
+    - { key: 'admin_space_left', value: '50' }
+  notify:
+    - Reiniciar auditd
